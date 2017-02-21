@@ -17,8 +17,12 @@ ServerWindow::~ServerWindow()
 void ServerWindow::on_startServerButton_clicked()
 {
     if (ui->tcpRadio->isChecked()) {
-        runServer(SOCK_STREAM, IPPROTO_TCP);
+        runServer(this, SOCK_STREAM, IPPROTO_TCP);
     } else {
-        runServer(SOCK_DGRAM, IPPROTO_UDP);
+        runServer(this, SOCK_DGRAM, IPPROTO_UDP);
     }
+}
+
+void ServerWindow::display(const char *msg) {
+    ui->textArea->setText(msg);
 }

@@ -8,7 +8,7 @@ SOCKADDR_IN clientCreateAddress(char *host) {
 
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(host);
-    addr.sin_port = 5150;
+    addr.sin_port = htons(5150);
 
     return addr;
 }
@@ -31,8 +31,9 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     memset((char *)&addr, 0, sizeof(SOCKADDR_IN));
     addr = clientCreateAddress(ip);
 
-    if (!connectToServer(sck, &addr))
+    if (!connectToServer(sck, &addr)) {
         return;
+    }
 
     data = (char *)malloc(size);
     if (data == NULL) {

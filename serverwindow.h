@@ -14,6 +14,7 @@ class ServerWindow : public QMainWindow
 public:
     explicit ServerWindow(QWidget *parent = 0);
     ~ServerWindow();
+    void display(const char *msg);
 
 private slots:
     void on_startServerButton_clicked();

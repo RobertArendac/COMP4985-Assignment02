@@ -12,6 +12,10 @@ int connectHost(char *host);
 int connectToServer(SOCKET s, SOCKADDR_IN *addr);
 DWORD waitForEvents(DWORD eventTotal, WSAEVENT *eventArray);
 int discoverEvents(SOCKET s, WSAEVENT event, LPWSANETWORKEVENTS networkEvents);
+int createEvent(WSAEVENT *eventArray);
+int acceptingSocket(SOCKET *acceptSocket, SOCKET listenSocket);
 SOCKET createSocket(int type, int protocol);
+int createWSAEvent(WSAEVENT *event);
+int setWSAEvent(WSAEVENT event);
 
 #endif // WRAPPERS_H
