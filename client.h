@@ -6,5 +6,6 @@
 
 SOCKADDR_IN clientCreateAddress(char *host);
 void runClient(int type, int protocol, char *ip, int size, int times);
+void CALLBACK clientRoutine(DWORD error, DWORD, LPWSAOVERLAPPED, DWORD);
 
 #endif // CLIENT_H
