@@ -2,6 +2,7 @@
 #include "wrappers.h"
 #include <stdio.h>
 #include <time.h>
+#include <WinBase.h>
 
 SOCKADDR_IN clientCreateAddress(char *host) {
     SOCKADDR_IN addr;
@@ -31,8 +32,10 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     memset((char *)&addr, 0, sizeof(SOCKADDR_IN));
     addr = clientCreateAddress(ip);
 
-    if (!connectToServer(sck, &addr)) {
-        return;
+    if (protocol == IPPROTO_TCP) {
+        if (!connectToServer(sck, &addr)) {
+            return;
+        }
     }
 
     data = (char *)malloc(size);
@@ -48,10 +51,12 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     if (protocol == IPPROTO_TCP) {
         for (size_t i = 0; i < times; i++) {
             send(sck, data, size, MSG_OOB);
+            fprintf(stdout, "Sent data\n");
         }
     } else {
         for (size_t i = 0; i < times; i++) {
             sendto(sck, data, size, 0, (SOCKADDR *)&addr, sizeof(addr));
+            fprintf(stdout, "Sent data\n");
         }
     }
     end = time(NULL);
@@ -59,6 +64,8 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     total = end - start;
 
     free(data);
+    Sleep(1000);
+    printf("closing socket");
     closesocket(sck);
     WSACleanup();
 }

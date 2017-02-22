@@ -62,7 +62,6 @@ DWORD waitForEvents(DWORD eventTotal, WSAEVENT *eventArray) {
     // last param true?
     if ((result = WSAWaitForMultipleEvents(eventTotal, eventArray, FALSE, WSA_INFINITE, TRUE)) == WSA_WAIT_FAILED) {
         fprintf(stderr, "Wait for events failed with error: %s\n", strerror(WSAGetLastError()));
-        return 0;
     }
 
     return result;

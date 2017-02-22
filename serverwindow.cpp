@@ -17,9 +17,9 @@ ServerWindow::~ServerWindow()
 void ServerWindow::on_startServerButton_clicked()
 {
     if (ui->tcpRadio->isChecked()) {
-        runServer(this, SOCK_STREAM, IPPROTO_TCP);
+        runTCPServer(this, SOCK_STREAM, IPPROTO_TCP);
     } else {
-        runServer(this, SOCK_DGRAM, IPPROTO_UDP);
+        runUDPServer(this, SOCK_DGRAM, IPPROTO_UDP);
     }
 }
 

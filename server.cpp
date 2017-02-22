@@ -3,7 +3,7 @@
 #include "serverwindow.h"
 #include <stdio.h>
 
-#define BUFSIZE 5000
+#define BUFSIZE 65000
 
 SOCKET acceptSocket;
 
@@ -40,33 +40,13 @@ int createSocketInfo(SOCKET socket, WSAEVENT *eventArray,
     return 1;
 }
 
-DWORD WINAPI serviceClient(void *arg) {
-    threadInfo *ti = (threadInfo *)arg;
-
-    return 0;
-}
-
-DWORD WINAPI workThread(void *arg) {
-    WSAEVENT events[1];
-    DWORD acceptReady;
+DWORD WINAPI udpThread(void *arg) {
     SocketInformation *si;
-    DWORD recvBytes, flags = 0;
-
-    events[0] = (WSAEVENT)arg;
+    DWORD recvBytes, flags = MSG_PARTIAL;
 
     while (1) {
-        while (1) {
-            if (!(acceptReady = waitForEvents(1, events))) {
-                return 0;
-            }
 
-            if (acceptReady != WAIT_IO_COMPLETION) {
-                printf("Connection established!!");
-                break;
-            }
-        }
-
-        WSAResetEvent(events[0]);
+        si = (SocketInformation *)malloc(sizeof(SocketInformation));
 
         si->socket = acceptSocket;
         ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
@@ -75,12 +55,61 @@ DWORD WINAPI workThread(void *arg) {
         si->dataBuf.len = BUFSIZE;
         si->dataBuf.buf = si->buffer;
 
+
+        if (WSARecvFrom(si->socket, &(si->dataBuf), 1, &recvBytes, &flags, NULL, NULL, &(si->overlapped), udpRoutine) == SOCKET_ERROR) {
+            if (WSAGetLastError() != WSA_IO_PENDING) {
+                fprintf(stderr, "WSARecv failed: %d\n", WSAGetLastError());
+                return 0;
+            }
+        }
+
+        SleepEx(INFINITE, TRUE);
+
+    }
+
+    return 1;
+}
+
+DWORD WINAPI tcpThread(void *arg) {
+    WSAEVENT events[1];
+    DWORD acceptReady;
+    SocketInformation *si;
+    DWORD recvBytes, flags = 0;
+    threadInfo *ti = (threadInfo *)arg;
+
+    events[0] = ti->event;
+
+    while (1) {
+        while (1) {
+            if ((acceptReady = waitForEvents(1, events)) == WSA_WAIT_FAILED) {
+                return 0;
+            }
+
+            if (acceptReady != WAIT_IO_COMPLETION) {
+                printf("Ready to start receiving\n");
+                break;
+            }
+        }
+
+        WSAResetEvent(events[0]);
+
+        si = (SocketInformation *)malloc(sizeof(SocketInformation));
+
+        si->socket = acceptSocket;
+        ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
+        si->bytesSent = 0;
+        si->bytesReceived = 0;
+        si->dataBuf.len = BUFSIZE;
+        si->dataBuf.buf = si->buffer;
+
+
         if (WSARecv(si->socket, &(si->dataBuf), 1, &recvBytes, &flags, &(si->overlapped), tcpRoutine) == SOCKET_ERROR) {
             if (WSAGetLastError() != WSA_IO_PENDING) {
                 fprintf(stderr, "WSARecv failed: %d\n", WSAGetLastError());
                 return 0;
             }
         }
+
     }
 
     return 1;
@@ -100,7 +129,7 @@ void CALLBACK tcpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED ov
         return;
     }
 
-    fprintf(stdout, "PACKET RECEIVED!!!!!!!");
+    printf("packet received\n");
 
     ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
 
@@ -115,15 +144,39 @@ void CALLBACK tcpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED ov
     }
 }
 
-void runServer(ServerWindow *sw, int type, int protocol) {
+void CALLBACK udpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED overlapped, DWORD flags) {
+    DWORD recvBytes;
+
+    SocketInformation *si = (SocketInformation *)overlapped;
+
+    if (error != 0 || bytesTransferred == 0) {
+        if (error) {
+            fprintf(stderr, "Error: %d\n", error);
+        }
+        fprintf(stderr, "Closing socket: %d\n", si->socket);
+        closesocket(si->socket);
+        return;
+    }
+
+    printf("%s\n", si->dataBuf.buf);
+
+    ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
+
+    si->dataBuf.len = BUFSIZE;
+    si->dataBuf.buf = si->buffer;
+
+    if (WSARecvFrom(si->socket, &(si->dataBuf), 1, &recvBytes, &flags, NULL, NULL, &(si->overlapped), udpRoutine) == SOCKET_ERROR) {
+        if (WSAGetLastError() != WSA_IO_PENDING) {
+            fprintf(stderr, "WSARecv failed: %d\n", WSAGetLastError());
+            return;
+        }
+    }
+}
+
+void runTCPServer(ServerWindow *sw, int type, int protocol) {
     SOCKET listenSocket;
     SOCKADDR_IN addr;
     WSAEVENT acceptEvent;
-    WSAEVENT eventArray[WSA_MAXIMUM_WAIT_EVENTS];
-    WSANETWORKEVENTS networkEvents;
-    SocketInformation *sockArray[WSA_MAXIMUM_WAIT_EVENTS];
-    DWORD eventTotal = 0;
-    DWORD event;
     threadInfo *ti;
 
     if (!startWinsock())
@@ -143,7 +196,11 @@ void runServer(ServerWindow *sw, int type, int protocol) {
     if (!createWSAEvent(&acceptEvent))
         return;
 
-    //CreateThread(NULL, 0, workThread, (void *)acceptEvent, 0, NULL);
+    ti = (threadInfo *)malloc(sizeof(threadInfo));
+    ti->event = acceptEvent;
+    ti->protocol = protocol;
+
+    CreateThread(NULL, 0, tcpThread, (void *)ti, 0, NULL);
 
     while (1) {
         if (!acceptingSocket(&acceptSocket, listenSocket))
@@ -151,7 +208,27 @@ void runServer(ServerWindow *sw, int type, int protocol) {
 
         if (!setWSAEvent(acceptEvent))
             return;
-
-        fprintf(stdout, "Event set, accept worked");
     }
+
+}
+
+void runUDPServer(ServerWindow *sw, int type, int protocol) {
+    SOCKADDR_IN addr;
+    HANDLE thrdHandle;
+
+    if (!startWinsock())
+        return;
+
+    addr = serverCreateAddress();
+
+    if ((acceptSocket = createSocket(type, protocol)) == NULL)
+        return;
+
+    if (!bindSocket(acceptSocket, &addr))
+        return;
+
+    thrdHandle = CreateThread(NULL, 0, udpThread, NULL, 0, NULL);
+
+    //So main thread doesn't exit.  Will wait forever, might come up with better soln later
+    WaitForSingleObject(thrdHandle, INFINITE);
 }

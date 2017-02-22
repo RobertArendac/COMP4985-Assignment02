@@ -5,7 +5,7 @@
 #include <Windows.h>
 #include "serverwindow.h"
 
-#define DATA_BUFSIZE 10000
+#define DATA_BUFSIZE 65000
 #define PORT 5150
 
 typedef struct SocketInformation {
@@ -18,17 +18,19 @@ typedef struct SocketInformation {
 } SocketInformation;
 
 typedef struct {
-    SOCKET acceptSck;
+    int protocol;
     WSAEVENT event;
 } threadInfo;
 
-void runServer(ServerWindow *sw, int type, int protocol);
+void runTCPServer(ServerWindow *sw, int type, int protocol);
+void runUDPServer(ServerWindow *sw, int type, int protocol);
 SOCKADDR_IN serverCreateAddress();
 int createSocketInfo(SOCKET socket, WSAEVENT *eventArray,
                      SocketInformation **sockArray, DWORD *eventTotal);
 
-DWORD WINAPI serviceClient(void *arg);
-DWORD WINAPI workThread(void *arg);
+DWORD WINAPI udpThread(void *arg);
+DWORD WINAPI tcpThread(void *arg);
 void CALLBACK tcpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED overlapped, DWORD flags);
+void CALLBACK udpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED overlapped, DWORD flags);
 
 #endif
