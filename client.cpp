@@ -1,5 +1,6 @@
 #include "client.h"
 #include "wrappers.h"
+#include "server.h"
 #include <stdio.h>
 #include <time.h>
 #include <WinBase.h>
@@ -14,11 +15,20 @@ SOCKADDR_IN clientCreateAddress(char *host) {
     return addr;
 }
 
+void CALLBACK clientRoutine(DWORD error, DWORD, LPWSAOVERLAPPED, DWORD) {
+    if (error) {
+        fprintf(stderr, "Error: %d\n", error);
+    }
+    return;
+}
+
 void runClient(int type, int protocol, char *ip, int size, int times) {
     SOCKET sck;
     SOCKADDR_IN addr;
     time_t start, end, total;
     char *data;
+    SocketInformation *si;
+    DWORD sendBytes;
 
     if (!startWinsock())
         return;
@@ -47,11 +57,20 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     strnset(data, 'a', size-1);
     data[size - 1] = '\0';
 
+    si = (SocketInformation *)malloc(sizeof(SocketInformation));
+    ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
+    si->socket = sck;
+    si->bytesReceived = 0;
+    si->bytesSent = 0;
+    si->dataBuf.buf = si->buffer;
+    si->dataBuf.len = DATA_BUFSIZE;
+
     start = time(NULL);
     if (protocol == IPPROTO_TCP) {
         for (size_t i = 0; i < times; i++) {
-            send(sck, data, size, MSG_OOB);
-            fprintf(stdout, "Sent data\n");
+            WSASend(si->socket, &(si->dataBuf), 1, &sendBytes, 0, &(si->overlapped), clientRoutine);
+//            send(sck, data, size, MSG_OOB);
+//            fprintf(stdout, "Sent data\n");
         }
     } else {
         for (size_t i = 0; i < times; i++) {
