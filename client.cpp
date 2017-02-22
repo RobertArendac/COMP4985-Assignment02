@@ -59,6 +59,7 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
 
     si = (SocketInformation *)malloc(sizeof(SocketInformation));
     ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
+    strcpy(si->buffer, data);
     si->socket = sck;
     si->bytesReceived = 0;
     si->bytesSent = 0;
@@ -69,13 +70,10 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     if (protocol == IPPROTO_TCP) {
         for (size_t i = 0; i < times; i++) {
             WSASend(si->socket, &(si->dataBuf), 1, &sendBytes, 0, &(si->overlapped), clientRoutine);
-//            send(sck, data, size, MSG_OOB);
-//            fprintf(stdout, "Sent data\n");
         }
     } else {
         for (size_t i = 0; i < times; i++) {
-            sendto(sck, data, size, 0, (SOCKADDR *)&addr, sizeof(addr));
-            fprintf(stdout, "Sent data\n");
+            WSASendTo(si->socket, &(si->dataBuf), 1, &sendBytes, 0, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN), &(si->overlapped), clientRoutine);
         }
     }
     end = time(NULL);
@@ -83,7 +81,7 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     total = end - start;
 
     free(data);
-    Sleep(1000);
+    Sleep(1000);    //Allow all data to come thru before closing
     printf("closing socket");
     closesocket(sck);
     WSACleanup();
