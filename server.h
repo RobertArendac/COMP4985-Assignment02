@@ -18,9 +18,9 @@ typedef struct SocketInformation {
 } SocketInformation;
 
 typedef struct {
-    size_t size;
+    int size;
     int time;
-    size_t numPackets;
+    int numPackets;
 } ServerStats;
 
 typedef struct {

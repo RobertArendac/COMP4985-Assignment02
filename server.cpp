@@ -3,7 +3,7 @@
 #include "serverwindow.h"
 #include <stdio.h>
 
-#define BUFSIZE 2000
+#define BUFSIZE 65000
 
 SOCKET acceptSocket;
 ServerStats stats;
@@ -94,6 +94,7 @@ DWORD WINAPI tcpThread(void *arg) {
         }
 
         WSAResetEvent(events[0]);
+        resetStats();
 
         si = (SocketInformation *)malloc(sizeof(SocketInformation));
 
@@ -144,7 +145,7 @@ void CALLBACK tcpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED ov
 
     printf("%s\n", si->dataBuf.buf);
     stats.numPackets++;
-    stats.size += sizeof(si->dataBuf.buf);
+    stats.size += (int)strlen(si->dataBuf.buf) + 1;
 
     ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
     memset(si->buffer, 0, sizeof(si->buffer));
@@ -228,13 +229,14 @@ void runTCPServer(ServerWindow *sw, int type, int protocol) {
 
         if (!setWSAEvent(acceptEvent))
             return;
+
     }
 
 }
 
 void runUDPServer(ServerWindow *sw, int type, int protocol) {
     SOCKADDR_IN addr;
-    HANDLE thrdHandle;
+    HANDLE tcpHandle, statsHandle;
 
     if (!startWinsock())
         return;
@@ -247,10 +249,12 @@ void runUDPServer(ServerWindow *sw, int type, int protocol) {
     if (!bindSocket(acceptSocket, &addr))
         return;
 
-    thrdHandle = CreateThread(NULL, 0, udpThread, NULL, 0, NULL);
-    thrdHandle = CreateThread(NULL, 0, statsThread, (void *)sw, 0, NULL);
+    tcpHandle = CreateThread(NULL, 0, udpThread, NULL, 0, NULL);
+    statsHandle = CreateThread(NULL, 0, statsThread, (void *)sw, 0, NULL);
 
-    WaitForSingleObject(thrdHandle, INFINITE); //So server keeps running
+    CloseHandle(statsHandle);
+
+    WaitForSingleObject(tcpHandle, INFINITE); //So server keeps running
 }
 
 void resetStats() {

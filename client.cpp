@@ -68,10 +68,10 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
 
     start = time(NULL);
     if (protocol == IPPROTO_TCP) {
-        Sleep(1000);
+        Sleep(50);
         for (size_t i = 0; i < times; i++) {
             WSASend(si->socket, &(si->dataBuf), 1, &sendBytes, 0, &(si->overlapped), clientRoutine);
-            Sleep(1000);
+            Sleep(50);
         }
     } else {
         for (size_t i = 0; i < times; i++) {
@@ -83,7 +83,7 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     total = end - start;
 
     free(data);
-    Sleep(1000);    //Allow all data to come thru before closing
+    Sleep(50);    //Allow all data to come thru before closing
     printf("closing socket");
     closesocket(sck);
     WSACleanup();
