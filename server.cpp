@@ -3,9 +3,10 @@
 #include "serverwindow.h"
 #include <stdio.h>
 
-#define BUFSIZE 65000
+#define BUFSIZE 2000
 
 SOCKET acceptSocket;
+ServerStats stats;
 
 SOCKADDR_IN serverCreateAddress() {
     SOCKADDR_IN addr;
@@ -55,6 +56,7 @@ DWORD WINAPI udpThread(void *arg) {
         si->dataBuf.len = BUFSIZE;
         si->dataBuf.buf = si->buffer;
 
+        //resetStats();
 
         if (WSARecvFrom(si->socket, &(si->dataBuf), 1, &recvBytes, &flags, NULL, NULL, &(si->overlapped), udpRoutine) == SOCKET_ERROR) {
             if (WSAGetLastError() != WSA_IO_PENDING) {
@@ -97,6 +99,7 @@ DWORD WINAPI tcpThread(void *arg) {
 
         si->socket = acceptSocket;
         ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
+        memset(si->buffer, 0, sizeof(si->buffer));
         si->bytesSent = 0;
         si->bytesReceived = 0;
         si->dataBuf.len = BUFSIZE;
@@ -115,6 +118,16 @@ DWORD WINAPI tcpThread(void *arg) {
     return 1;
 }
 
+DWORD WINAPI statsThread(void *arg) {
+    ServerWindow *sw = (ServerWindow *)arg;
+
+    while (1) {
+        sw->updateTime(stats.time);
+        sw->updatePackets(stats.numPackets);
+        sw->updateSize(stats.size);
+    }
+}
+
 void CALLBACK tcpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED overlapped, DWORD flags) {
     DWORD recvBytes;
 
@@ -129,9 +142,12 @@ void CALLBACK tcpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED ov
         return;
     }
 
-    printf("packet received\n");
+    printf("%s\n", si->dataBuf.buf);
+    stats.numPackets++;
+    stats.size += sizeof(si->dataBuf.buf);
 
     ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
+    memset(si->buffer, 0, sizeof(si->buffer));
 
     si->dataBuf.len = BUFSIZE;
     si->dataBuf.buf = si->buffer;
@@ -158,7 +174,9 @@ void CALLBACK udpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED ov
         return;
     }
 
-    printf("%s\n", si->dataBuf.buf);
+    printf("received\n");
+    stats.numPackets++;
+    stats.size += sizeof(si->dataBuf.buf);
 
     ZeroMemory(&(si->overlapped), sizeof(WSAOVERLAPPED));
 
@@ -178,6 +196,8 @@ void runTCPServer(ServerWindow *sw, int type, int protocol) {
     SOCKADDR_IN addr;
     WSAEVENT acceptEvent;
     threadInfo *ti;
+
+    CreateThread(NULL, 0, statsThread, (void *)sw, 0, NULL);
 
     if (!startWinsock())
         return;
@@ -228,7 +248,13 @@ void runUDPServer(ServerWindow *sw, int type, int protocol) {
         return;
 
     thrdHandle = CreateThread(NULL, 0, udpThread, NULL, 0, NULL);
+    thrdHandle = CreateThread(NULL, 0, statsThread, (void *)sw, 0, NULL);
 
-    //So main thread doesn't exit.  Will wait forever, might come up with better soln later
-    WaitForSingleObject(thrdHandle, INFINITE);
+    WaitForSingleObject(thrdHandle, INFINITE); //So server keeps running
+}
+
+void resetStats() {
+    stats.time = 0;
+    stats.numPackets = 0;
+    stats.size = 0;
 }

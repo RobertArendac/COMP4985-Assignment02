@@ -64,12 +64,14 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     si->bytesReceived = 0;
     si->bytesSent = 0;
     si->dataBuf.buf = si->buffer;
-    si->dataBuf.len = DATA_BUFSIZE;
+    si->dataBuf.len = size;
 
     start = time(NULL);
     if (protocol == IPPROTO_TCP) {
+        Sleep(1000);
         for (size_t i = 0; i < times; i++) {
             WSASend(si->socket, &(si->dataBuf), 1, &sendBytes, 0, &(si->overlapped), clientRoutine);
+            Sleep(1000);
         }
     } else {
         for (size_t i = 0; i < times; i++) {

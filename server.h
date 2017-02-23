@@ -18,6 +18,12 @@ typedef struct SocketInformation {
 } SocketInformation;
 
 typedef struct {
+    size_t size;
+    int time;
+    size_t numPackets;
+} ServerStats;
+
+typedef struct {
     int protocol;
     WSAEVENT event;
 } threadInfo;
@@ -28,8 +34,10 @@ SOCKADDR_IN serverCreateAddress();
 int createSocketInfo(SOCKET socket, WSAEVENT *eventArray,
                      SocketInformation **sockArray, DWORD *eventTotal);
 
+void resetStats();
 DWORD WINAPI udpThread(void *arg);
 DWORD WINAPI tcpThread(void *arg);
+DWORD WINAPI statsThread(void *arg);
 void CALLBACK tcpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED overlapped, DWORD flags);
 void CALLBACK udpRoutine(DWORD error, DWORD bytesTransferred, LPWSAOVERLAPPED overlapped, DWORD flags);
 

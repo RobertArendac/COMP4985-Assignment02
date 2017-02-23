@@ -2,6 +2,8 @@
 #define SERVERWINDOW_H
 
 #include <QMainWindow>
+#include <WinSock2.h>
+#include <Windows.h>
 
 namespace Ui {
 class ServerWindow;
@@ -14,7 +16,9 @@ class ServerWindow : public QMainWindow
 public:
     explicit ServerWindow(QWidget *parent = 0);
     ~ServerWindow();
-    void display(const char *msg);
+    void updateTime(int timeInMs);
+    void updatePackets(int numPackets);
+    void updateSize(int size);
 
 private slots:
     void on_startServerButton_clicked();
