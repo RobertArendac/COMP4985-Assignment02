@@ -17,6 +17,10 @@ ServerWindow::~ServerWindow()
     delete ui;
 }
 
+/**
+ * @brief ServerWindow::on_startServerButton_clicked Runs servers on seperate thread
+ * @author Robert Arendac
+ */
 void ServerWindow::on_startServerButton_clicked()
 {
     HANDLE thread;
@@ -29,6 +33,7 @@ void ServerWindow::on_startServerButton_clicked()
     }
 }
 
+/* Threads so GUI isn't blocked */
 DWORD WINAPI threadTCP(void *arg) {
     ServerWindow *sw = (ServerWindow *)arg;
     runTCPServer(sw, SOCK_STREAM, IPPROTO_TCP);
@@ -43,6 +48,7 @@ DWORD WINAPI threadUDP(void *arg) {
     return 0;
 }
 
+/* Bunch of functions to update GUI */
 void ServerWindow::updateTime(int timeInMs) {
     ui->tTime->display(timeInMs);
 }

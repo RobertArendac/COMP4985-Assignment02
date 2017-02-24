@@ -152,7 +152,7 @@
    <widget class="QLCDNumber" name="dataSize">
     <property name="geometry">
      <rect>
-      <x>160</x>
+      <x>150</x>
       <y>220</y>
       <width>101</width>
       <height>23</height>

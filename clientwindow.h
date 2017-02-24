@@ -14,6 +14,7 @@ class ClientWindow : public QMainWindow
 public:
     explicit ClientWindow(QWidget *parent = 0);
     ~ClientWindow();
+    void updateTime(int time);
 
 private slots:
     void on_connectButton_clicked();

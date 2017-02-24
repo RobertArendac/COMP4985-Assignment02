@@ -15,6 +15,10 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+/**
+ * @brief MainWindow::on_serverButton_clicked Starts a new server window
+ * @author Robert Arendac
+ */
 void MainWindow::on_serverButton_clicked()
 {
     this->hide();
@@ -22,6 +26,10 @@ void MainWindow::on_serverButton_clicked()
     sw->show();
 }
 
+/**
+ * @brief MainWindow::on_clientButton_clicked Starts a new client window
+ * @author Robert Arendac
+ */
 void MainWindow::on_clientButton_clicked()
 {
     this->hide();

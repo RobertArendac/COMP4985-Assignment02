@@ -1,10 +1,19 @@
 #include "client.h"
 #include "wrappers.h"
 #include "server.h"
+#include "clientwindow.h"
 #include <stdio.h>
 #include <time.h>
 #include <WinBase.h>
 
+ClientStats stats;
+
+/**
+ * @brief clientCreateAddress sets up a address structure for the client to use
+ * @author Robert Arendac
+ * @param host - The IP address of the server the client wants to connect to
+ * @return Created address structure
+ */
 SOCKADDR_IN clientCreateAddress(char *host) {
     SOCKADDR_IN addr;
 
@@ -15,20 +24,56 @@ SOCKADDR_IN clientCreateAddress(char *host) {
     return addr;
 }
 
+/**
+ * @brief statThread Thread function that continuously updates the GUI time field
+ * @author Robert Arendac
+ * @param arg The ClientWindow GUI
+ * @return Thread exit condition
+ */
+DWORD WINAPI statThread(void *arg) {
+    ClientWindow *cw = (ClientWindow *)arg;
+
+    while (1) {
+        cw->updateTime(stats.time);
+    }
+
+    return 0;
+}
+
+/**
+ * @brief clientRoutine callback function that is executed when send operation completes
+ * @author Robert Arendac
+ * @param error Error code that occurs on Send
+ */
 void CALLBACK clientRoutine(DWORD error, DWORD, LPWSAOVERLAPPED, DWORD) {
     if (error) {
         fprintf(stderr, "Error: %d\n", error);
     }
-    return;
 }
 
-void runClient(int type, int protocol, char *ip, int size, int times) {
+/**
+ * @brief runClient main driver of the client side.  Creates an overlapped socket and sends data via the UDP or TCP
+ * protocol
+ * @author Robert Arendac
+ * @param cw Pointer to the ClientWindow GUI
+ * @param type Will be either SOCK_STREAM or USER_DGRAM
+ * @param protocol TCP or UDP
+ * @param ip IP address that cliennt will connect to
+ * @param size Size of the packet
+ * @param times Times to send the packet
+ *
+ * I'm really sorry about the sleeps...
+ */
+void runClient(ClientWindow *cw, int type, int protocol, char *ip, int size, int times) {
     SOCKET sck;
     SOCKADDR_IN addr;
-    time_t start, end, total;
     char *data;
     SocketInformation *si;
     DWORD sendBytes;
+    SYSTEMTIME start, end;
+    int sleepDelay;
+
+    stats.time = 0;
 
     if (!startWinsock())
         return;
@@ -66,24 +111,31 @@ void runClient(int type, int protocol, char *ip, int size, int times) {
     si->dataBuf.buf = si->buffer;
     si->dataBuf.len = size;
 
-    start = time(NULL);
+    GetSystemTime(&start);
+    /* Sleeps used so that client doesn't get overwhelmed with data, prevents crashing and buff overflow */
     if (protocol == IPPROTO_TCP) {
-        Sleep(50);
+        Sleep(65);
         for (size_t i = 0; i < times; i++) {
             WSASend(si->socket, &(si->dataBuf), 1, &sendBytes, 0, &(si->overlapped), clientRoutine);
-            Sleep(50);
+            Sleep(65);
         }
     } else {
+        Sleep(65);
         for (size_t i = 0; i < times; i++) {
             WSASendTo(si->socket, &(si->dataBuf), 1, &sendBytes, 0, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN), &(si->overlapped), clientRoutine);
+            Sleep(65);
         }
     }
-    end = time(NULL);
+    GetSystemTime(&end);
 
-    total = end - start;
+    stats.time = delay(start, end);
+    sleepDelay = (times + 1) * 65;
+    stats.time -= sleepDelay;
+
+    cw->updateTime(stats.time);
 
     free(data);
-    Sleep(50);    //Allow all data to come thru before closing
+    Sleep(65);    //Allow all data to come thru before closing
     printf("closing socket");
     closesocket(sck);
     WSACleanup();

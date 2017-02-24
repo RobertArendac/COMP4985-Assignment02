@@ -35,6 +35,7 @@ int createSocketInfo(SOCKET socket, WSAEVENT *eventArray,
                      SocketInformation **sockArray, DWORD *eventTotal);
 
 void resetStats();
+long delay (SYSTEMTIME t1, SYSTEMTIME t2);
 DWORD WINAPI udpThread(void *arg);
 DWORD WINAPI tcpThread(void *arg);
 DWORD WINAPI statsThread(void *arg);

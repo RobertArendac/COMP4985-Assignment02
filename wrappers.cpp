@@ -1,3 +1,8 @@
+/**
+ * Whole bunch of Windows API calls in wrappers.
+ * @author Robert Arendac
+ */
+
 #include "wrappers.h"
 #include <stdio.h>
 
